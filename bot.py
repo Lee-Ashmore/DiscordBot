@@ -1,17 +1,19 @@
 import os
-
 import discord
 from dotenv import load_dotenv
 
 load_dotenv()
-TOKEN = os.getenv('DISCORD_TOKEN')
 GUILD = os.getenv('DISCORD_GUILD')
+# needs to be typecast as a string since getenv returns a string
+WC_ID = int(os.getenv('DISCORD_WC_ID'))
+TOKEN = os.getenv('DISCORD_TOKEN')
 
 client = discord.Client()
 
 
 @client.event
 async def on_ready():
+
     print(f'{client.user} has connected to Discord\n')
     guild = discord.utils.get(client.guilds, name=GUILD)
     print(
@@ -23,12 +25,11 @@ async def on_ready():
 @client.event
 async def on_member_join(member):
     welcome_message = f'Hello {member.name}, welcome to The Library.'
-    channel_id = 651910855742717976  # this is the id for the welcome channel
 
     await member.create_dm()
     await member.dm_channel.send(welcome_message)
 
-    channel = client.get_channel(channel_id)
+    channel = client.get_channel(WC_ID)
     await channel.send(welcome_message)
 
 
@@ -57,5 +58,23 @@ async def on_message(message):
         previous_message['consecutive_messages'] = 0
 
     print(previous_message)
+
+
+@client.event
+async def on_member_update(before, after):
+    if before.roles == after.roles or len(before.roles) > len(after.roles):
+        return
+    else:
+        roles = []
+        for role in after.roles:
+            if role not in before.roles:
+                roles.append(role)
+
+        channel = client.get_channel(WC_ID)
+
+        print('CHANNEL:' + str(channel))
+
+        for role in roles:
+            await channel.send(f'Congratulations {after.mention}, you have been promoted to:\n\t{role}')
 
 client.run(TOKEN)
