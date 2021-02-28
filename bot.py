@@ -1,5 +1,6 @@
 import os
 import discord
+import collections
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -44,6 +45,12 @@ async def on_message(message):
     if message.author == client.user:
         return
 
+    if message.clean_content[0] == '!':
+        #process for command 
+        await process_command(message, message.channel.id)
+        return
+
+
     # check message author
     if message.author.id == previous_message['user']:
         previous_message['consecutive_messages'] += 1
@@ -76,5 +83,73 @@ async def on_member_update(before, after):
 
         for role in roles:
             await channel.send(f'Congratulations {after.mention}, you have been promoted to:\n\t{role}')
+
+
+async def process_command(message, channel):
+    response = 'No valid command given. Try "!help" for a list of commands'
+    content = message.clean_content[1:]
+    arguments = content.split(' ')
+    arguments.remove('')
+    content = arguments.pop(0)
+
+    print(f'RECIEVED COMMAND: {content} WITH ARGUMENTS: {arguments}')
+
+    if content == 'tk':
+        response = tk(message.mentions, arguments[1])
+    if content == 'help':
+        response = 'HELP'
+    
+    print('PROCESSING COMMAND RESPONSE: ' + response)
+    channel = client.get_channel(channel)
+    await channel.send(response)
+    
+
+def tk(person, amount=0):
+    if len(person) > 1:
+        return 'No valid command given. Try "!help" for a list of commands'
+    person = person[0]
+    newScore = {str(person.id): amount}
+    name = person.name
+    scoreboard = get_scoreboard()
+    update_scoreboard(newScore)
+
+    return f'{name} has {scoreboard[str(person.id)]} team kills'
+
+def get_scoreboard():
+    scoreboard = {}
+
+    try: 
+        with open("tk.txt", 'r+') as file:
+            contents = file.read()
+
+            lines = contents.split('\n')
+            for line in lines:
+                chunks = line.split('|')
+                if len(chunks) == 2:
+                    scoreboard[chunks[0]] = chunks[1]
+            file.seek(0)
+    except IOError as e:
+        print('ERROR in get_scoreboard: ' + e)
+
+    return scoreboard
+
+def update_scoreboard(newScore):
+    scoreboard = get_scoreboard()
+    keys = newScore.keys()
+    try:
+        with open("tk.txt", 'r+') as file:
+            for key in keys:
+                if key in scoreboard:
+                    print(newScore[key] + scoreboard[key])
+                    scoreboard[key] = int(newScore[key]) + int(scoreboard[key]) 
+                else:
+                    scoreboard[key] = newSCore[key]
+            
+                file.seek(0)
+                for userId in scoreboard:
+                    file.write(f'{userId}|{scoreboard[userId]}\n')
+                file.truncate()
+    except IOError as e:
+        print('ERROR in get_scoreboard: ' + e)
 
 client.run(TOKEN)
